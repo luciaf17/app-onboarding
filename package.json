@@ -1,0 +1,13 @@
+{
+  "name": "onboarding-app",
+  "version": "1.0.0",
+  "description": "Client onboarding tracker for voice agent deployments",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "bcryptjs": "^2.4.3"
+  }
+}

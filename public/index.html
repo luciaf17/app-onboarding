@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding · Agentes de Voz</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0c0f;--s1:#16161a;--s2:#1e1e24;--bd:#2a2a32;--tx:#e8e8ed;--tx2:#8b8b9a;--ac:#6ee7b7;--ac2:#34d399;--yl:#fbbf24;--yl-bg:rgba(251,191,36,.1);--rd:#f87171;--rd-bg:rgba(248,113,113,.08);--bl:#60a5fa;--bl-bg:rgba(96,165,250,.1);--gn-bg:rgba(110,231,183,.08)}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+.app{max-width:900px;margin:0 auto;padding:20px 16px 80px}
+/* Login */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:32px;width:100%;max-width:360px}
+.login-box h2{font-size:20px;margin-bottom:4px}.login-box .sub{color:var(--tx2);font-size:13px;margin-bottom:24px}
+.field{margin-bottom:14px}.field label{display:block;font-size:12px;color:var(--tx2);margin-bottom:4px;font-weight:500}
+.field input{width:100%;background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:10px 12px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:14px}
+.field input:focus{outline:none;border-color:var(--ac)}
+.btn-login{width:100%;padding:10px;background:var(--ac);color:var(--bg);border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px}
+.btn-login:hover{background:var(--ac2)}.err-msg{color:var(--rd);font-size:12px;margin-top:8px;display:none}
+/* Top bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bd);margin-bottom:20px}
+.topbar-left{display:flex;align-items:center;gap:8px}.topbar-user{font-size:12px;color:var(--tx2)}
+.btn-out{background:none;border:1px solid var(--bd);color:var(--tx2);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-out:hover{border-color:var(--rd);color:var(--rd)}
+/* Client bar */
+.cbar{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cbar label{font-size:12px;color:var(--tx2);font-weight:500}
+.csel{background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:7px 10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;min-width:180px}
+.csel:focus{outline:none;border-color:var(--ac)}
+.cactions{display:flex;gap:5px;margin-left:auto}
+.btn-s{padding:5px 12px;border-radius:5px;border:1px solid var(--bd);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;background:var(--s2);transition:all .15s}
+.btn-s.add{color:var(--ac);border-color:var(--ac)}.btn-s.add:hover{background:var(--gn-bg)}
+.btn-s.del{color:var(--rd);border-color:transparent}.btn-s.del:hover{background:var(--rd-bg)}
+.btn-s.dup{color:var(--bl);border-color:transparent}.btn-s.dup:hover{background:var(--bl-bg)}
+.btn-s.exp{color:var(--yl);border-color:transparent}.btn-s.exp:hover{background:var(--yl-bg)}
+/* Modal */
+.mo{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.mo.show{display:flex}.mbox{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:24px;width:90%;max-width:420px}
+.mbox h3{font-size:16px;margin-bottom:14px}.mbox input,.mbox select{width:100%;background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:9px 12px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:10px}
+.mbox input:focus,.mbox select:focus{outline:none;border-color:var(--ac)}
+.mbox .hint{font-size:11px;color:var(--tx2);margin-bottom:14px}
+.mbtns{display:flex;gap:8px;justify-content:flex-end}.mbtn{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600}
+.mbtn-c{background:var(--s2);color:var(--tx2)}.mbtn-ok{background:var(--ac);color:var(--bg)}.mbtn-ok:hover{background:var(--ac2)}
+/* Hero */
+.hero{padding:24px 0 20px;border-bottom:1px solid var(--bd);margin-bottom:20px}
+.hero h1{font-size:22px;font-weight:700;letter-spacing:-.3px;margin-bottom:2px}
+.hero .sub{color:var(--tx2);font-size:12px;margin-bottom:14px}
+.pw{display:flex;align-items:center;gap:12px}.pt{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}
+.pb{height:100%;background:var(--ac);border-radius:3px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+.pl{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ac);min-width:85px;text-align:right}
+/* Empty */
+.empty{text-align:center;padding:50px 20px;color:var(--tx2)}.empty p{margin-bottom:12px;font-size:14px}
+/* Phase */
+.ph{margin-bottom:8px;border:1px solid var(--bd);border-radius:9px;background:var(--s1);overflow:hidden;transition:border-color .2s}
+.ph:hover{border-color:#3a3a44}
+.phh{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none}
+.phl{display:flex;align-items:center;gap:8px}
+.phn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tx2);background:var(--s2);padding:2px 7px;border-radius:3px}
+.phname{font-weight:600;font-size:13.5px}
+.phr{display:flex;align-items:center;gap:10px}
+.phcnt{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx2)}
+.phchev{color:var(--tx2);transition:transform .25s;font-size:14px}.phchev.open{transform:rotate(180deg)}
+.pill{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:3px}
+.pill-r{background:var(--rd-bg);color:var(--rd)}.pill-y{background:var(--yl-bg);color:var(--yl)}
+.pill-b{background:var(--bl-bg);color:var(--bl)}.pill-g{background:var(--gn-bg);color:var(--ac)}
+.phb{display:none;padding:0 16px 12px}.phb.open{display:block}
+.stit{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--tx2);margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--bd)}
+.it{display:flex;align-items:flex-start;gap:8px;padding:5px 0}
+.it input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--bd);border-radius:3px;cursor:pointer;flex-shrink:0;margin-top:2px;position:relative;transition:all .12s;background:transparent}
+.it input[type=checkbox]:checked{background:var(--ac);border-color:var(--ac)}
+.it input[type=checkbox]:checked::after{content:'\2713';position:absolute;top:-1px;left:1.5px;font-size:11px;color:var(--bg);font-weight:700}
+.it label{cursor:pointer;font-size:12.5px;line-height:1.4;flex:1;transition:all .2s}
+.it label.done{text-decoration:line-through;color:var(--tx2);opacity:.5}
+.tg{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;margin-left:3px;vertical-align:middle;white-space:nowrap}
+.tg-f{background:var(--yl-bg);color:var(--yl)}.tg-l{background:var(--gn-bg);color:var(--ac)}
+.note-box{background:var(--yl-bg);border-left:3px solid var(--yl);padding:8px 12px;border-radius:0 5px 5px 0;margin:8px 0;font-size:11px;color:var(--yl)}
+/* Inline note input */
+.it-note{width:100%;background:var(--s2);border:1px solid transparent;color:var(--tx2);padding:3px 8px;border-radius:4px;font-family:'DM Sans',sans-serif;font-size:11px;margin-top:3px;transition:border-color .15s}
+.it-note:focus{outline:none;border-color:var(--ac);color:var(--tx)}
+.it-note::placeholder{color:#555}
+/* Check meta */
+.check-meta{font-size:10px;color:var(--tx2);margin-top:2px;font-family:'JetBrains Mono',monospace}
+/* Add step */
+.add-step{display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--bd)}
+.add-step input{flex:1;background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;border-radius:5px;font-family:'DM Sans',sans-serif;font-size:12px}
+.add-step input:focus{outline:none;border-color:var(--ac)}
+.add-step button{padding:6px 12px;background:var(--s2);border:1px solid var(--ac);color:var(--ac);border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600}
+.add-step button:hover{background:var(--gn-bg)}
+/* Datos section */
+.datos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.dato-field{display:flex;flex-direction:column;gap:2px}
+.dato-field label{font-size:10px;color:var(--tx2);font-weight:500}
+.dato-field input{background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:6px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px}
+.dato-field input:focus{outline:none;border-color:var(--ac)}
+/* Footer */
+.foot{display:flex;gap:6px;margin-top:16px;padding-top:14px;border-top:1px solid var(--bd);flex-wrap:wrap}
+.fbtn{padding:7px 14px;border-radius:5px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;transition:all .15s}
+.fbtn-r{background:var(--s2);color:var(--rd)}.fbtn-r:hover{background:var(--rd-bg)}
+.fbtn-e{background:var(--s2);color:var(--ac)}.fbtn-e:hover{background:var(--gn-bg)}
+@media(max-width:600px){.app{padding:12px 10px 50px}.cbar{padding:10px 12px}.cactions{margin-left:0;width:100%}.datos-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ===== Config =====
+let TOKEN=localStorage.getItem('ob_token')||'';
+let USER=localStorage.getItem('ob_user')||'';
+let currentClient=localStorage.getItem('ob_current')||'';
+let clientsCache={};
+let clientData=null;
+let customSteps=[];
+
+const PHASES=[
+{id:"p0",title:"Prerequisitos",num:"00",pill:"Bloqueante",pc:"pill-r",note:"Completar antes de configurar cualquier clínica.",sections:[
+{label:"Parametrización",items:[
+{id:"p0_1",t:"WF2: Config dinámico + Leads By ID",tg:"Dev",tc:"tg-l"},
+{id:"p0_2",t:"WF Agendamiento: calendar_id y location_id dinámicos",tg:"Dev",tc:"tg-l"},
+{id:"p0_3",t:"WF Agendamiento: Rama API Clinics.es",tg:"Dev",tc:"tg-l"},
+{id:"p0_4",t:"WF Corte de Flujo: tabla Leads dinámica",tg:"Dev",tc:"tg-l"},
+{id:"p0_5",t:"WF Agendamiento: tags post-agendamiento",tg:"Dev",tc:"tg-l"},
+{id:"p0_6",t:"Retell: DNI en agendar_cita",tg:"Dev",tc:"tg-l"},
+{id:"p0_7",t:"Retell: Prompt DNI",tg:"Dev",tc:"tg-l"},
+{id:"p0_8",t:"Timeout Waits GHL (15 min)",tg:"Dev",tc:"tg-l"},
+{id:"p0_9",t:"Retry WF1 rate limit",tg:"Dev",tc:"tg-l"},
+]}]},
+{id:"p1",title:"Datos del cliente",num:"01",pill:"Datos",pc:"pill-y",note:"Sin estos datos no se avanza.",hasDatos:true,sections:[
+{label:"Generales",items:[
+{id:"p1_1",t:"Nombre de la clínica",tg:"Comercial",tc:"tg-f",dato:"nombre_clinica"},
+{id:"p1_2",t:"cliente_id",tg:"Comercial",tc:"tg-f",dato:"cliente_id"},
+{id:"p1_3",t:"Dirección",tg:"Comercial",tc:"tg-f",dato:"direccion"},
+{id:"p1_4",t:"Horario",tg:"Comercial",tc:"tg-f",dato:"horario"},
+{id:"p1_5",t:"Tratamientos y precios",tg:"Comercial",tc:"tg-f"},
+{id:"p1_6",t:"Nombre asesora",tg:"Comercial",tc:"tg-f",dato:"nombre_asesora"},
+]},
+{label:"Telefonía",items:[
+{id:"p1_7",t:"Número teléfono",tg:"Comercial",tc:"tg-f",dato:"telefono"},
+{id:"p1_8",t:"Proveedor SIP",tg:"Comercial",tc:"tg-f",dato:"proveedor_sip"},
+{id:"p1_9",t:"Credenciales SIP",tg:"Comercial",tc:"tg-f"},
+{id:"p1_10",t:"¿Inbound, outbound o ambos?",tg:"Comercial",tc:"tg-f"},
+{id:"p1_11",t:"Segundos espera desvío (si inbound)",tg:"Comercial",tc:"tg-f"},
+]},
+{label:"API Clinics.es",items:[
+{id:"p1_12",t:"Headers auth (clinica + codi)",tg:"Comercial",tc:"tg-f"},
+{id:"p1_13",t:"ID agenda primeras visitas",tg:"Comercial",tc:"tg-f",dato:"api_agenda_id"},
+{id:"p1_14",t:"ID tratamiento",tg:"Comercial",tc:"tg-f",dato:"api_tract_id"},
+{id:"p1_15",t:"Duración visita (min)",tg:"Comercial",tc:"tg-f",dato:"api_durada"},
+{id:"p1_16",t:"¿DNI obligatorio?",tg:"Comercial",tc:"tg-f"},
+]},
+{label:"GHL",items:[
+{id:"p1_17",t:"Subcuenta desde snapshot",tg:"Comercial",tc:"tg-f"},
+{id:"p1_18",t:"Location ID",tg:"Comercial",tc:"tg-f",dato:"ghl_location_id"},
+{id:"p1_19",t:"Private Token",tg:"Comercial",tc:"tg-f"},
+{id:"p1_20",t:"Textos WhatsApp",tg:"Comercial",tc:"tg-f"},
+{id:"p1_21",t:"Destinatarios notificaciones",tg:"Comercial",tc:"tg-f"},
+]},
+{label:"Airtable",items:[
+{id:"p1_22",t:"Tabla Leads creada",tg:"Comercial",tc:"tg-f"},
+{id:"p1_23",t:"Base ID + Table ID",tg:"Comercial",tc:"tg-f",dato:"airtable_base_id"},
+{id:"p1_24",t:"clinica_id rellenado",tg:"Comercial",tc:"tg-f"},
+]}]},
+{id:"p2",title:"Config clientes",num:"02",pill:"Setup",pc:"pill-b",sections:[
+{label:"",items:[
+{id:"p2_1",t:"Fila en config_clientes completa",tg:"Dev",tc:"tg-l"},
+]}]},
+{id:"p3",title:"Retell",num:"03",pill:"Setup",pc:"pill-b",sections:[
+{label:"Workspace y número",items:[
+{id:"p3_1",t:"Workspace creado",tg:"Dev",tc:"tg-l"},
+{id:"p3_2",t:"API key → config",tg:"Dev",tc:"tg-l"},
+{id:"p3_3",t:"Número SIP configurado",tg:"Dev",tc:"tg-l"},
+{id:"p3_4",t:"Termination URI + creds",tg:"Dev",tc:"tg-l"},
+{id:"p3_5",t:"Llamada saliente OK",tg:"Dev",tc:"tg-l"},
+{id:"p3_6",t:"Llamada entrante OK",tg:"Dev",tc:"tg-l"},
+]},
+{label:"Agente Outbound",items:[
+{id:"p3_7",t:"Prompt personalizado",tg:"Dev",tc:"tg-l"},
+{id:"p3_8",t:"Dynamic variables",tg:"Dev",tc:"tg-l"},
+{id:"p3_9",t:"ver_disponibilidad",tg:"Dev",tc:"tg-l"},
+{id:"p3_10",t:"agendar_cita + DNI",tg:"Dev",tc:"tg-l"},
+{id:"p3_11",t:"solicitar_callback",tg:"Dev",tc:"tg-l"},
+{id:"p3_12",t:"Webhook → WF2",tg:"Dev",tc:"tg-l"},
+{id:"p3_13",t:"Outbound Agent asignado",tg:"Dev",tc:"tg-l"},
+{id:"p3_14",t:"Agent ID → config",tg:"Dev",tc:"tg-l"},
+]},
+{label:"Agente Inbound",items:[
+{id:"p3_15",t:"Prompt inbound",tg:"Dev",tc:"tg-l"},
+{id:"p3_16",t:"Funciones + DNI",tg:"Dev",tc:"tg-l"},
+{id:"p3_17",t:"Webhook → WF2",tg:"Dev",tc:"tg-l"},
+{id:"p3_18",t:"Inbound Agent asignado",tg:"Dev",tc:"tg-l"},
+]},
+{label:"Desvío (si solo inbound)",items:[
+{id:"p3_19",t:"Desvío centralita configurado",tg:"Dev",tc:"tg-l"},
+]}]},
+{id:"p4",title:"GHL",num:"04",pill:"Setup",pc:"pill-b",sections:[
+{label:"Subcuenta",items:[
+{id:"p4_1",t:"Subcuenta desde snapshot",tg:"Dev",tc:"tg-l"},
+{id:"p4_2",t:"Location ID → config",tg:"Dev",tc:"tg-l"},
+{id:"p4_3",t:"Token → config",tg:"Dev",tc:"tg-l"},
+]},
+{label:"Workflows",items:[
+{id:"p4_4",t:"Ciclo: webhooks correctos",tg:"Dev",tc:"tg-l"},
+{id:"p4_5",t:"Ciclo: textos WA adaptados",tg:"Dev",tc:"tg-l"},
+{id:"p4_6",t:"Notificaciones: destinatarios",tg:"Dev",tc:"tg-l"},
+{id:"p4_7",t:"Cita Agendada: trigger OK",tg:"Dev",tc:"tg-l"},
+{id:"p4_8",t:"Estado voz: webhooks",tg:"Dev",tc:"tg-l"},
+]}]},
+{id:"p5",title:"Airtable",num:"05",pill:"Setup",pc:"pill-b",sections:[
+{label:"",items:[
+{id:"p5_1",t:"Tabla Leads completa",tg:"Dev",tc:"tg-l"},
+{id:"p5_2",t:"Todos los campos",tg:"Dev",tc:"tg-l"},
+{id:"p5_3",t:"clinica_id OK",tg:"Dev",tc:"tg-l"},
+{id:"p5_4",t:"IDs → config",tg:"Dev",tc:"tg-l"},
+{id:"p5_5",t:"Auto: Corte flujo",tg:"Dev",tc:"tg-l"},
+{id:"p5_6",t:"Auto: Lanzar ciclo",tg:"Dev",tc:"tg-l"},
+{id:"p5_7",t:"Auto: Ciclo x estado_voz",tg:"Dev",tc:"tg-l"},
+]}]},
+{id:"p6",title:"Testing",num:"06",pill:"Test",pc:"pill-g",note:"Todo antes de ir a producción.",sections:[
+{label:"Outbound",items:[
+{id:"p6_1",t:"Contesta → clasifica",tg:"Dev",tc:"tg-l"},
+{id:"p6_2",t:"No contesta → DD",tg:"Dev",tc:"tg-l"},
+{id:"p6_3",t:"DD contesta",tg:"Dev",tc:"tg-l"},
+{id:"p6_4",t:"Agendamiento vivo",tg:"Dev",tc:"tg-l"},
+{id:"p6_5",t:"Derivar humano",tg:"Dev",tc:"tg-l"},
+{id:"p6_6",t:"Callback",tg:"Dev",tc:"tg-l"},
+{id:"p6_7",t:"Ciclo completo",tg:"Dev",tc:"tg-l"},
+{id:"p6_8",t:"Corte flujo",tg:"Dev",tc:"tg-l"},
+{id:"p6_9",t:"Lanzar manual",tg:"Dev",tc:"tg-l"},
+]},
+{label:"Inbound",items:[
+{id:"p6_10",t:"Atiende OK",tg:"Dev",tc:"tg-l"},
+{id:"p6_11",t:"Para ciclo",tg:"Dev",tc:"tg-l"},
+{id:"p6_12",t:"Sin ciclo OK",tg:"Dev",tc:"tg-l"},
+{id:"p6_13",t:"Agenda con DNI",tg:"Dev",tc:"tg-l"},
+{id:"p6_14",t:"Desvío OK",tg:"Dev",tc:"tg-l"},
+]},
+{label:"Datos",items:[
+{id:"p6_15",t:"call_logs OK",tg:"Dev",tc:"tg-l"},
+{id:"p6_16",t:"Leads actualiza",tg:"Dev",tc:"tg-l"},
+{id:"p6_17",t:"total_llamadas",tg:"Dev",tc:"tg-l"},
+{id:"p6_18",t:"Fecha PV",tg:"Dev",tc:"tg-l"},
+{id:"p6_19",t:"Tags GHL",tg:"Dev",tc:"tg-l"},
+]}]},
+{id:"p7",title:"Go Live",num:"07",pill:"Launch",pc:"pill-g",sections:[
+{label:"",items:[
+{id:"p7_1",t:"Waits producción",tg:"Dev",tc:"tg-l"},
+{id:"p7_2",t:"is_active = true",tg:"Dev",tc:"tg-l"},
+{id:"p7_3",t:"GHL publicado",tg:"Dev",tc:"tg-l"},
+{id:"p7_4",t:"Monitorear 5-10 ejecuciones",tg:"Dev",tc:"tg-l"},
+{id:"p7_5",t:"Error Handler OK",tg:"Dev",tc:"tg-l"},
+]}]}
+];
+
+// ===== API =====
+async function api(method,url,body){
+  const opts={method,headers:{'Content-Type':'application/json','x-auth-token':TOKEN}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(url,opts);
+  if(r.status===401){TOKEN='';USER='';localStorage.removeItem('ob_token');localStorage.removeItem('ob_user');renderApp();return null;}
+  return r.json();
+}
+
+// ===== Render =====
+function renderApp(){
+  const el=document.getElementById('app');
+  if(!TOKEN){el.innerHTML=loginHTML();return;}
+  loadClients();
+}
+
+function loginHTML(){
+  return`<div class="login-wrap"><div class="login-box"><h2>Onboarding</h2><p class="sub">Agentes de Voz</p>
+  <div class="field"><label>Usuario</label><input id="lu" placeholder="usuario"></div>
+  <div class="field"><label>Contraseña</label><input id="lp" type="password" placeholder="contraseña"></div>
+  <button class="btn-login" onclick="doLogin()">Entrar</button>
+  <div class="err-msg" id="lerr"></div></div></div>`;
+}
+
+async function doLogin(){
+  const u=document.getElementById('lu').value,p=document.getElementById('lp').value;
+  const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user:u,pass:p})});
+  const d=await r.json();
+  if(d.error){document.getElementById('lerr').style.display='block';document.getElementById('lerr').textContent=d.error;return;}
+  TOKEN=d.token;USER=d.user;localStorage.setItem('ob_token',TOKEN);localStorage.setItem('ob_user',USER);renderApp();
+}
+
+async function doLogout(){await api('POST','/api/logout');TOKEN='';USER='';localStorage.removeItem('ob_token');localStorage.removeItem('ob_user');renderApp();}
+
+async function loadClients(){
+  const d=await api('GET','/api/clients');if(!d)return;
+  clientsCache=d.clients||{};customSteps=d.customSteps||[];
+  if(currentClient&&!clientsCache[currentClient])currentClient='';
+  if(!currentClient){const k=Object.keys(clientsCache);if(k.length)currentClient=k[0];}
+  if(currentClient)await loadClient(currentClient);else clientData=null;
+  renderMain();
+}
+
+async function loadClient(id){
+  const d=await api('GET','/api/clients/'+id);if(!d)return;
+  clientData=d.client;customSteps=d.customSteps||[];
+  currentClient=id;localStorage.setItem('ob_current',id);
+}
+
+function renderMain(){
+  const el=document.getElementById('app');
+  let h=`<div class="app">`;
+  h+=`<div class="topbar"><div class="topbar-left"><span class="topbar-user">${USER}</span></div><button class="btn-out" onclick="doLogout()">Salir</button></div>`;
+  h+=renderClientBar();
+  if(!currentClient||!clientData){h+=`<div class="hero"><h1>Onboarding</h1><p class="sub">Seleccioná o creá un cliente</p><div class="pw"><div class="pt"><div class="pb" style="width:0"></div></div><div class="pl">—</div></div></div>`;h+=`<div class="empty"><p>Creá un cliente para empezar</p></div>`;}
+  else{h+=renderHero();h+=renderPhases();h+=renderFooter();}
+  h+=`</div>`;h+=renderModal();
+  el.innerHTML=h;
+}
+
+function renderClientBar(){
+  const clients=Object.keys(clientsCache).sort();
+  let opts=clients.length?clients.map(c=>`<option value="${c}"${c===currentClient?' selected':''}>${clientsCache[c].name} (${clientsCache[c].progress}%)</option>`).join(''):'<option value="">— Sin clientes —</option>';
+  return`<div class="cbar"><label>Cliente:</label><select class="csel" onchange="switchClient(this.value)">${opts}</select><div class="cactions"><button class="btn-s add" onclick="showModal('add')">+ Nuevo</button><button class="btn-s dup" onclick="showModal('dup')">Duplicar</button><button class="btn-s del" onclick="delClient()">Eliminar</button></div></div>`;
+}
+
+function renderHero(){
+  const checks=clientData.checks||{};
+  const allItems=getAllItems();
+  const done=allItems.filter(i=>checks[i.id]&&checks[i.id].done).length;
+  const pct=allItems.length?Math.round(done/allItems.length*100):0;
+  return`<div class="hero"><h1>${clientData.name}</h1><p class="sub">Tipo: ${clientData.tipo} · Creado: ${clientData.created}</p><div class="pw"><div class="pt"><div class="pb" style="width:${pct}%"></div></div><div class="pl">${done}/${allItems.length} · ${pct}%</div></div></div>`;
+}
+
+function getAllItems(){
+  let items=PHASES.flatMap(p=>p.sections.flatMap(s=>s.items));
+  customSteps.forEach(cs=>{items.push({id:cs.id,t:cs.text,tg:cs.tag,tc:cs.tag==='Dev'?'tg-l':'tg-f'});});
+  return items;
+}
+
+function renderPhases(){
+  const checks=clientData.checks||{};const notes=clientData.notes||{};const datos=clientData.datos||{};
+  let h='';
+  PHASES.forEach(p=>{
+    const allItems=[...p.sections.flatMap(s=>s.items),...customSteps.filter(cs=>cs.phaseId===p.id)];
+    const done=allItems.filter(i=>checks[i.id]&&checks[i.id].done).length;
+    h+=`<div class="ph"><div class="phh" onclick="togPh('${p.id}')"><div class="phl"><span class="phn">${p.num}</span><span class="phname">${p.title}</span><span class="pill ${p.pc}">${p.pill}</span></div><div class="phr"><span class="phcnt" id="cnt_${p.id}">${done}/${allItems.length}</span><span class="phchev" id="chv_${p.id}">▾</span></div></div>`;
+    h+=`<div class="phb" id="bd_${p.id}">`;
+    if(p.note)h+=`<div class="note-box">${p.note}</div>`;
+    p.sections.forEach(s=>{
+      if(s.label)h+=`<div class="stit">${s.label}</div>`;
+      s.items.forEach(i=>{
+        const ck=checks[i.id];const isDone=ck&&ck.done;const nt=notes[i.id]||'';
+        h+=`<div class="it"><input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${i.id}',this.checked)"><label class="${isDone?'done':''}">${i.t} <span class="tg ${i.tc}">${i.tg}</span></label></div>`;
+        if(isDone&&ck.date)h+=`<div class="check-meta" style="margin-left:24px">${new Date(ck.date).toLocaleDateString('es')} · ${ck.user||''}</div>`;
+        h+=`<div style="margin-left:24px"><input class="it-note" placeholder="nota..." value="${esc(nt)}" onblur="saveNote('${i.id}',this.value)"></div>`;
+        if(i.dato){const v=datos[i.dato]||'';h+=`<div style="margin-left:24px;margin-top:2px"><input class="it-note" style="color:var(--ac);border-color:var(--bd)" placeholder="${i.dato}" value="${esc(v)}" onblur="saveDato('${i.dato}',this.value)"></div>`;}
+      });
+    });
+    const csteps=customSteps.filter(cs=>cs.phaseId===p.id);
+    csteps.forEach(cs=>{
+      const ck=checks[cs.id];const isDone=ck&&ck.done;const nt=notes[cs.id]||'';
+      h+=`<div class="it"><input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${cs.id}',this.checked)"><label class="${isDone?'done':''}">${cs.text} <span class="tg ${cs.tag==='Dev'?'tg-l':'tg-f'}">${cs.tag}</span></label><button style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:14px" onclick="delStep('${cs.id}')">&times;</button></div>`;
+      if(isDone&&ck.date)h+=`<div class="check-meta" style="margin-left:24px">${new Date(ck.date).toLocaleDateString('es')} · ${ck.user||''}</div>`;
+      h+=`<div style="margin-left:24px"><input class="it-note" placeholder="nota..." value="${esc(nt)}" onblur="saveNote('${cs.id}',this.value)"></div>`;
+    });
+    h+=`<div class="add-step"><input id="ns_${p.id}" placeholder="Agregar paso..."><button onclick="addStep('${p.id}')">+</button></div>`;
+    h+=`</div></div>`;
+  });
+  return h;
+}
+
+function renderFooter(){
+  return`<div class="foot"><button class="fbtn fbtn-r" onclick="resetCl()">Resetear</button><button class="fbtn fbtn-e" onclick="exportCl()">Copiar estado</button></div>`;
+}
+
+function renderModal(){
+  return`<div class="mo" id="modal"><div class="mbox"><h3 id="mtitle">Nuevo</h3><input id="mname" placeholder="Nombre clínica"><select id="mtipo"><option value="outbound+inbound">Outbound + Inbound</option><option value="outbound">Solo Outbound</option><option value="inbound">Solo Inbound</option></select><div class="mbtns"><button class="mbtn mbtn-c" onclick="closeModal()">Cancelar</button><button class="mbtn mbtn-ok" id="mok" onclick="confirmModal()">Crear</button></div></div></div>`;
+}
+
+function esc(s){return(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+// ===== Actions =====
+let modalMode='add';
+
+function showModal(mode){
+  modalMode=mode;
+  document.getElementById('mtitle').textContent=mode==='add'?'Nuevo cliente':'Duplicar: '+(clientData?clientData.name:'');
+  document.getElementById('mok').textContent=mode==='add'?'Crear':'Duplicar';
+  document.getElementById('mname').value=mode==='dup'&&clientData?clientData.name+' (copia)':'';
+  document.getElementById('modal').classList.add('show');
+  setTimeout(()=>document.getElementById('mname').focus(),100);
+}
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+
+async function confirmModal(){
+  const name=document.getElementById('mname').value.trim();if(!name)return;
+  const tipo=document.getElementById('mtipo').value;
+  const id=name.toLowerCase().replace(/[^a-z0-9]/g,'_');
+  closeModal();
+  if(modalMode==='add'){await api('POST','/api/clients',{id,name,tipo});}
+  else{await api('POST','/api/clients/'+currentClient+'/duplicate',{newId:id,newName:name});}
+  currentClient=id;await loadClients();
+}
+
+async function switchClient(id){currentClient=id;localStorage.setItem('ob_current',id);await loadClient(id);renderMain();}
+async function delClient(){if(!currentClient||!confirm('¿Eliminar "'+clientData.name+'"?'))return;await api('DELETE','/api/clients/'+currentClient);currentClient='';await loadClients();}
+async function resetCl(){if(!confirm('¿Resetear progreso?'))return;await api('PUT','/api/clients/'+currentClient,{checks:{},notes:{}});await loadClient(currentClient);renderMain();}
+
+async function togCheck(id,done){
+  await api('POST','/api/clients/'+currentClient+'/check',{checkId:id,done});
+  await loadClient(currentClient);renderMain();
+}
+async function saveNote(id,val){await api('POST','/api/clients/'+currentClient+'/note',{checkId:id,value:val});}
+async function saveDato(field,val){await api('POST','/api/clients/'+currentClient+'/datos',{field,value:val});}
+
+async function addStep(phaseId){
+  const inp=document.getElementById('ns_'+phaseId);const text=inp.value.trim();if(!text)return;
+  await api('POST','/api/custom-steps',{phaseId,text,tag:'Dev'});
+  await loadClients();
+}
+async function delStep(id){if(!confirm('¿Eliminar paso?'))return;await api('DELETE','/api/custom-steps/'+id);await loadClients();}
+
+function togPh(id){document.getElementById('bd_'+id).classList.toggle('open');document.getElementById('chv_'+id).classList.toggle('open');}
+
+async function exportCl(){
+  if(!currentClient||!clientData)return;
+  const checks=clientData.checks||{};const allItems=getAllItems();
+  const done=allItems.filter(i=>checks[i.id]&&checks[i.id].done).length;
+  let txt=`ONBOARDING: ${clientData.name}\n${new Date().toLocaleDateString('es')}\nTipo: ${clientData.tipo}\nProgreso: ${done}/${allItems.length}\n\n`;
+  PHASES.forEach(p=>{
+    const items=[...p.sections.flatMap(s=>s.items),...customSteps.filter(cs=>cs.phaseId===p.id)];
+    const d=items.filter(i=>checks[i.id]&&checks[i.id].done).length;
+    txt+=`${p.title}: ${d}/${items.length}\n`;
+    items.forEach(i=>{txt+=`  ${checks[i.id]&&checks[i.id].done?'✅':'⬜'} ${i.t||i.text}\n`;});
+    txt+='\n';
+  });
+  try{await navigator.clipboard.writeText(txt);alert('Copiado');}catch(e){prompt('Copiá manualmente:',txt);}
+}
+
+// Enter key in modal
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('modal').classList.contains('show'))confirmModal();});
+
+// Init
+renderApp();
+</script>
+</body>
+</html>
