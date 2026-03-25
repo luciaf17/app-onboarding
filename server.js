@@ -221,23 +221,19 @@ app.put('/api/custom-steps/:stepId', authMiddleware, (req, res) => {
 });
 
 app.post('/api/custom-steps/move', authMiddleware, (req, res) => {
-  const { stepId, direction } = req.body;
+  const { stepId, beforeId } = req.body;
   const db = readDB();
   if (!db.customSteps) return res.status(404).json({ error: 'No hay pasos' });
   const idx = db.customSteps.findIndex(s => s.id === stepId);
   if (idx === -1) return res.status(404).json({ error: 'Paso no encontrado' });
-  const step = db.customSteps[idx];
-  // Find siblings in same phase+section
-  const siblings = db.customSteps
-    .map((s, i) => ({ s, i }))
-    .filter(x => x.s.phaseId === step.phaseId && (x.s.sectionLabel || '') === (step.sectionLabel || ''));
-  const posInSiblings = siblings.findIndex(x => x.i === idx);
-  if (direction === 'up' && posInSiblings > 0) {
-    const swapIdx = siblings[posInSiblings - 1].i;
-    [db.customSteps[idx], db.customSteps[swapIdx]] = [db.customSteps[swapIdx], db.customSteps[idx]];
-  } else if (direction === 'down' && posInSiblings < siblings.length - 1) {
-    const swapIdx = siblings[posInSiblings + 1].i;
-    [db.customSteps[idx], db.customSteps[swapIdx]] = [db.customSteps[swapIdx], db.customSteps[idx]];
+  // Remove the step from its current position
+  const [step] = db.customSteps.splice(idx, 1);
+  // Find target position: insert before the target step
+  const targetIdx = db.customSteps.findIndex(s => s.id === beforeId);
+  if (targetIdx === -1) {
+    db.customSteps.push(step);
+  } else {
+    db.customSteps.splice(targetIdx, 0, step);
   }
   writeDB(db);
   res.json({ ok: true });
