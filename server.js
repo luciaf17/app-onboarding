@@ -85,9 +85,7 @@ app.get('/api/clients', authMiddleware, (req, res) => {
       name: v.name,
       tipo: v.tipo,
       created: v.created,
-      progress: totalChecks ? Math.round((doneChecks / totalChecks) * 100) : 0,
-      done: doneChecks,
-      total: totalChecks
+      checks: v.checks || {}
     };
   }
   res.json({ clients: summary, customSteps: db.customSteps || [], taskOverrides: db.taskOverrides || {}, hiddenTasks: db.hiddenTasks || [] });

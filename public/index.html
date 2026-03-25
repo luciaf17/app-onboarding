@@ -341,9 +341,27 @@ function renderMain(){
   el.innerHTML=h;
 }
 
+function calcProgress(c){
+  const info=clientsCache[c];if(!info)return 0;
+  const tipo=info.tipo||'outbound+inbound';
+  let total=0;
+  PHASES.forEach(p=>{
+    p.sections.forEach(s=>{
+      if(shouldShowSection(s,tipo)){
+        s.items.forEach(i=>{if(!isHidden(i.id))total++;});
+      }
+    });
+  });
+  customSteps.forEach(cs=>{if(!isHidden(cs.id))total++;});
+  if(!total)return 0;
+  const checks=info.checks||{};
+  const done=Object.values(checks).filter(ck=>ck.done).length;
+  return Math.round(done/total*100);
+}
+
 function renderClientBar(){
   const clients=Object.keys(clientsCache).sort();
-  let opts=clients.length?clients.map(c=>`<option value="${c}"${c===currentClient?' selected':''}>${clientsCache[c].name} (${clientsCache[c].progress}%)</option>`).join(''):'<option value="">— Sin clientes —</option>';
+  let opts=clients.length?clients.map(c=>`<option value="${c}"${c===currentClient?' selected':''}>${clientsCache[c].name} (${calcProgress(c)}%)</option>`).join(''):'<option value="">— Sin clientes —</option>';
   return`<div class="cbar"><label>Cliente:</label><select class="csel" onchange="switchClient(this.value)">${opts}</select><div class="cactions"><button class="btn-s add" onclick="showModal('add')">+ Nuevo</button><button class="btn-s dup" onclick="showModal('dup')">Duplicar</button><button class="btn-s del" onclick="delClient()">Eliminar</button></div></div>`;
 }
 
