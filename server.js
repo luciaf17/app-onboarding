@@ -15,7 +15,7 @@ app.use(express.static('public'));
 // ===== Users =====
 const USERS = {
   'lu': bcrypt.hashSync('Hyp3r1a$2026', 10),
-  'ferran': bcrypt.hashSync('Mak3da$2026', 10)
+  'ferran': bcrypt.hashSync('Hyp3r1a$2026', 10)
 };
 
 // ===== Sessions =====
