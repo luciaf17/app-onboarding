@@ -88,6 +88,9 @@
 .add-step input:focus{outline:none;border-color:var(--ac)}
 .add-step select{background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:6px 8px;border-radius:5px;font-family:'DM Sans',sans-serif;font-size:11px}
 .add-step button{padding:6px 12px;background:var(--s2);border:1px solid var(--ac);color:var(--ac);border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600}
+.add-step select{min-width:60px}
+/* Move buttons */
+.it-actions .btn-move{color:var(--tx2);font-size:10px;line-height:1}.it-actions .btn-move:hover{background:var(--bl-bg);color:var(--bl)}
 .add-step button:hover{background:var(--gn-bg)}
 /* Item actions */
 .it-actions{display:flex;gap:2px;flex-shrink:0;margin-top:2px}
@@ -127,6 +130,7 @@ let customSteps=[];
 let taskOverrides={};
 let hiddenTasks=[];
 let editingTask=null;
+let openPhases=new Set();
 
 const TAG_OPTIONS=['Dev','Setup','Comercial','Test','Launch','Ops','Legal'];
 const TAG_CLASSES={'Dev':'tg-l','Setup':'tg-b','Comercial':'tg-f','Test':'tg-l','Launch':'tg-l','Ops':'tg-b','Legal':'tg-r'};
@@ -398,6 +402,26 @@ function getVisibleItems(){
   return items;
 }
 
+function renderItem(i,checks,notes,datos,isCustom){
+  const text=getItemText(i);const tag=getItemTag(i);const tc=tagClass(tag);
+  const id=i.id;const ck=checks[id];const isDone=ck&&ck.done;const nt=notes[id]||'';
+  let h='';
+  h+=`<div class="it"><input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${id}',this.checked)"><label class="${isDone?'done':''}">${esc(text)} <span class="tg ${tc}" onclick="event.stopPropagation();cycleTag('${id}','${tag}',${isCustom})">${tag}</span></label>`;
+  h+=`<div class="it-actions">`;
+  if(isCustom){
+    h+=`<button class="btn-move" title="Subir" onclick="moveStep('${id}','up')">&#9650;</button>`;
+    h+=`<button class="btn-move" title="Bajar" onclick="moveStep('${id}','down')">&#9660;</button>`;
+  }
+  h+=`<button class="btn-edit" title="Editar" onclick="startEdit('${id}')">&#9998;</button>`;
+  h+=isCustom?`<button class="btn-del" title="Eliminar" onclick="delStep('${id}')">&#10005;</button>`:`<button class="btn-del" title="Eliminar" onclick="hideTask('${id}')">&#10005;</button>`;
+  h+=`</div></div>`;
+  if(isDone&&ck.date)h+=`<div class="check-meta" style="margin-left:24px">${new Date(ck.date).toLocaleDateString('es')} · ${ck.user||''}</div>`;
+  if(editingTask===id)h+=renderEditInline(id,text,tag,isCustom);
+  h+=`<div style="margin-left:24px"><input class="it-note" placeholder="nota..." value="${esc(nt)}" onblur="saveNote('${id}',this.value)"></div>`;
+  if(i.dato){const v=datos[i.dato]||'';h+=`<div style="margin-left:24px;margin-top:2px"><input class="it-note" style="color:var(--ac);border-color:var(--bd)" placeholder="${i.dato}" value="${esc(v)}" onblur="saveDato('${i.dato}',this.value)"></div>`;}
+  return h;
+}
+
 function renderPhases(){
   const checks=clientData.checks||{};const notes=clientData.notes||{};const datos=clientData.datos||{};
   const tipo=clientData.tipo||'outbound+inbound';
@@ -406,35 +430,33 @@ function renderPhases(){
     const visibleSections=p.sections.filter(s=>shouldShowSection(s,tipo));
     if(visibleSections.length===0)return;
     const allItems=[...visibleSections.flatMap(s=>s.items.filter(i=>!isHidden(i.id))),...customSteps.filter(cs=>cs.phaseId===p.id&&!isHidden(cs.id))];
-    const done=allItems.filter(i=>checks[i.id||i]&&checks[i.id||i].done).length;
-    h+=`<div class="ph"><div class="phh" onclick="togPh('${p.id}')"><div class="phl"><span class="phn">${p.num}</span><span class="phname">${p.title}</span><span class="pill ${p.pc}">${p.pill}</span></div><div class="phr"><span class="phcnt" id="cnt_${p.id}">${done}/${allItems.length}</span><span class="phchev" id="chv_${p.id}">▾</span></div></div>`;
-    h+=`<div class="phb" id="bd_${p.id}">`;
+    const done=allItems.filter(i=>checks[i.id]&&checks[i.id].done).length;
+    const isOpen=openPhases.has(p.id);
+    h+=`<div class="ph"><div class="phh" onclick="togPh('${p.id}')"><div class="phl"><span class="phn">${p.num}</span><span class="phname">${p.title}</span><span class="pill ${p.pc}">${p.pill}</span></div><div class="phr"><span class="phcnt">${done}/${allItems.length}</span><span class="phchev${isOpen?' open':''}" id="chv_${p.id}">▾</span></div></div>`;
+    h+=`<div class="phb${isOpen?' open':''}" id="bd_${p.id}">`;
     if(p.note)h+=`<div class="note-box">${p.note}</div>`;
+    // Collect section labels for the add-step dropdown
+    const sectionLabels=visibleSections.map(s=>s.label).filter(l=>l);
     visibleSections.forEach(s=>{
       if(s.label)h+=`<div class="stit">${s.label}</div>`;
       s.items.forEach(i=>{
         if(isHidden(i.id))return;
-        const text=getItemText(i);const tag=getItemTag(i);const tc=tagClass(tag);
-        const ck=checks[i.id];const isDone=ck&&ck.done;const nt=notes[i.id]||'';
-        h+=`<div class="it"><input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${i.id}',this.checked)"><label class="${isDone?'done':''}">${esc(text)} <span class="tg ${tc}" onclick="event.stopPropagation();cycleTag('${i.id}','${tag}',false)">${tag}</span></label>`;
-        h+=`<div class="it-actions"><button class="btn-edit" title="Editar" onclick="startEdit('${i.id}','${esc(text).replace(/'/g,"\\'")}','${tag}',false)">&#9998;</button><button class="btn-del" title="Eliminar" onclick="hideTask('${i.id}')">&#10005;</button></div></div>`;
-        if(isDone&&ck.date)h+=`<div class="check-meta" style="margin-left:24px">${new Date(ck.date).toLocaleDateString('es')} · ${ck.user||''}</div>`;
-        if(editingTask===i.id)h+=renderEditInline(i.id,text,tag,false);
-        h+=`<div style="margin-left:24px"><input class="it-note" placeholder="nota..." value="${esc(nt)}" onblur="saveNote('${i.id}',this.value)"></div>`;
-        if(i.dato){const v=datos[i.dato]||'';h+=`<div style="margin-left:24px;margin-top:2px"><input class="it-note" style="color:var(--ac);border-color:var(--bd)" placeholder="${i.dato}" value="${esc(v)}" onblur="saveDato('${i.dato}',this.value)"></div>`;}
+        h+=renderItem(i,checks,notes,datos,false);
+      });
+      // Render custom steps assigned to this section
+      const sLabel=s.label||'';
+      customSteps.filter(cs=>cs.phaseId===p.id&&!isHidden(cs.id)&&(cs.sectionLabel||'')=== sLabel).forEach(cs=>{
+        h+=renderItem(cs,checks,notes,datos,true);
       });
     });
-    const csteps=customSteps.filter(cs=>cs.phaseId===p.id&&!isHidden(cs.id));
-    csteps.forEach(cs=>{
-      const text=getItemText(cs);const tag=getItemTag(cs);const tc=tagClass(tag);
-      const ck=checks[cs.id];const isDone=ck&&ck.done;const nt=notes[cs.id]||'';
-      h+=`<div class="it"><input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${cs.id}',this.checked)"><label class="${isDone?'done':''}">${esc(text)} <span class="tg ${tc}" onclick="event.stopPropagation();cycleTag('${cs.id}','${tag}',true)">${tag}</span></label>`;
-      h+=`<div class="it-actions"><button class="btn-edit" title="Editar" onclick="startEdit('${cs.id}','${esc(text).replace(/'/g,"\\'")}','${tag}',true)">&#9998;</button><button class="btn-del" title="Eliminar" onclick="delStep('${cs.id}')">&#10005;</button></div></div>`;
-      if(isDone&&ck.date)h+=`<div class="check-meta" style="margin-left:24px">${new Date(ck.date).toLocaleDateString('es')} · ${ck.user||''}</div>`;
-      if(editingTask===cs.id)h+=renderEditInline(cs.id,text,tag,true);
-      h+=`<div style="margin-left:24px"><input class="it-note" placeholder="nota..." value="${esc(nt)}" onblur="saveNote('${cs.id}',this.value)"></div>`;
+    // Render custom steps with no section or unknown section
+    const knownLabels=p.sections.map(s=>s.label||'');
+    customSteps.filter(cs=>cs.phaseId===p.id&&!isHidden(cs.id)&&!knownLabels.includes(cs.sectionLabel||'')).forEach(cs=>{
+      h+=renderItem(cs,checks,notes,datos,true);
     });
-    h+=`<div class="add-step"><input id="ns_${p.id}" placeholder="Agregar paso..."><select id="nstag_${p.id}">${TAG_OPTIONS.map(t=>`<option value="${t}">${t}</option>`).join('')}</select><button onclick="addStep('${p.id}')">+</button></div>`;
+    // Add step with section selector
+    let secOpts=`<option value="">General</option>`+sectionLabels.map(l=>`<option value="${esc(l)}">${l}</option>`).join('');
+    h+=`<div class="add-step"><input id="ns_${p.id}" placeholder="Agregar paso..."><select id="nssec_${p.id}">${secOpts}</select><select id="nstag_${p.id}">${TAG_OPTIONS.map(t=>`<option value="${t}">${t}</option>`).join('')}</select><button onclick="addStep('${p.id}')">+</button></div>`;
     h+=`</div></div>`;
   });
   return h;
@@ -492,13 +514,19 @@ async function saveDato(field,val){await api('POST','/api/clients/'+currentClien
 async function addStep(phaseId){
   const inp=document.getElementById('ns_'+phaseId);const text=inp.value.trim();if(!text)return;
   const tagSel=document.getElementById('nstag_'+phaseId);const tag=tagSel?tagSel.value:'Dev';
-  await api('POST','/api/custom-steps',{phaseId,text,tag});
+  const secSel=document.getElementById('nssec_'+phaseId);const sectionLabel=secSel?secSel.value:'';
+  await api('POST','/api/custom-steps',{phaseId,text,tag,sectionLabel});
   await loadClients();
 }
 async function delStep(id){if(!confirm('¿Eliminar paso?'))return;await api('DELETE','/api/custom-steps/'+id);await loadClients();}
 
+async function moveStep(id,direction){
+  await api('POST','/api/custom-steps/move',{stepId:id,direction});
+  await loadClients();
+}
+
 // Edit tasks
-function startEdit(id,text,tag,isCustom){
+function startEdit(id){
   editingTask=id;renderMain();
   setTimeout(()=>{const el=document.getElementById('edit_text_'+id);if(el)el.focus();},50);
 }
@@ -511,12 +539,7 @@ async function saveEdit(id,isCustom){
   const text=textEl.value.trim();const tag=tagEl.value;
   if(!text)return;
   if(isCustom){
-    // For custom steps, delete and recreate with new text/tag
-    const cs=customSteps.find(c=>c.id===id);
-    if(cs){
-      await api('DELETE','/api/custom-steps/'+id);
-      await api('POST','/api/custom-steps',{phaseId:cs.phaseId,text,tag});
-    }
+    await api('PUT','/api/custom-steps/'+id,{text,tag});
   } else {
     await api('PUT','/api/task-overrides/'+id,{text,tag});
   }
@@ -536,11 +559,7 @@ async function cycleTag(id,currentTag,isCustom){
   const idx=TAG_OPTIONS.indexOf(currentTag);
   const nextTag=TAG_OPTIONS[(idx+1)%TAG_OPTIONS.length];
   if(isCustom){
-    const cs=customSteps.find(c=>c.id===id);
-    if(cs){
-      await api('DELETE','/api/custom-steps/'+id);
-      await api('POST','/api/custom-steps',{phaseId:cs.phaseId,text:cs.text,tag:nextTag});
-    }
+    await api('PUT','/api/custom-steps/'+id,{tag:nextTag});
   } else {
     const ov=taskOverrides[id]||{};
     await api('PUT','/api/task-overrides/'+id,{text:ov.text||'',tag:nextTag});
@@ -548,7 +567,11 @@ async function cycleTag(id,currentTag,isCustom){
   await loadClients();
 }
 
-function togPh(id){document.getElementById('bd_'+id).classList.toggle('open');document.getElementById('chv_'+id).classList.toggle('open');}
+function togPh(id){
+  if(openPhases.has(id))openPhases.delete(id);else openPhases.add(id);
+  document.getElementById('bd_'+id).classList.toggle('open');
+  document.getElementById('chv_'+id).classList.toggle('open');
+}
 
 async function exportCl(){
   if(!currentClient||!clientData)return;

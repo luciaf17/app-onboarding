@@ -197,14 +197,50 @@ app.post('/api/clients/:id/datos', authMiddleware, (req, res) => {
 
 // ===== Custom steps =====
 app.post('/api/custom-steps', authMiddleware, (req, res) => {
-  const { phaseId, text, tag } = req.body;
+  const { phaseId, text, tag, sectionLabel } = req.body;
   if (!phaseId || !text) return res.status(400).json({ error: 'Faltan datos' });
   const db = readDB();
   if (!db.customSteps) db.customSteps = [];
   const id = 'custom_' + Date.now();
-  db.customSteps.push({ id, phaseId, text, tag: tag || 'Dev', created: new Date().toISOString() });
+  db.customSteps.push({ id, phaseId, text, tag: tag || 'Dev', sectionLabel: sectionLabel || '', created: new Date().toISOString() });
   writeDB(db);
   res.json({ ok: true, id });
+});
+
+app.put('/api/custom-steps/:stepId', authMiddleware, (req, res) => {
+  const db = readDB();
+  if (!db.customSteps) db.customSteps = [];
+  const step = db.customSteps.find(s => s.id === req.params.stepId);
+  if (!step) return res.status(404).json({ error: 'Paso no encontrado' });
+  const { text, tag, sectionLabel } = req.body;
+  if (text !== undefined) step.text = text;
+  if (tag !== undefined) step.tag = tag;
+  if (sectionLabel !== undefined) step.sectionLabel = sectionLabel;
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+app.post('/api/custom-steps/move', authMiddleware, (req, res) => {
+  const { stepId, direction } = req.body;
+  const db = readDB();
+  if (!db.customSteps) return res.status(404).json({ error: 'No hay pasos' });
+  const idx = db.customSteps.findIndex(s => s.id === stepId);
+  if (idx === -1) return res.status(404).json({ error: 'Paso no encontrado' });
+  const step = db.customSteps[idx];
+  // Find siblings in same phase+section
+  const siblings = db.customSteps
+    .map((s, i) => ({ s, i }))
+    .filter(x => x.s.phaseId === step.phaseId && (x.s.sectionLabel || '') === (step.sectionLabel || ''));
+  const posInSiblings = siblings.findIndex(x => x.i === idx);
+  if (direction === 'up' && posInSiblings > 0) {
+    const swapIdx = siblings[posInSiblings - 1].i;
+    [db.customSteps[idx], db.customSteps[swapIdx]] = [db.customSteps[swapIdx], db.customSteps[idx]];
+  } else if (direction === 'down' && posInSiblings < siblings.length - 1) {
+    const swapIdx = siblings[posInSiblings + 1].i;
+    [db.customSteps[idx], db.customSteps[swapIdx]] = [db.customSteps[swapIdx], db.customSteps[idx]];
+  }
+  writeDB(db);
+  res.json({ ok: true });
 });
 
 app.delete('/api/custom-steps/:stepId', authMiddleware, (req, res) => {
