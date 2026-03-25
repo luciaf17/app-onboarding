@@ -90,10 +90,13 @@
 .add-step button{padding:6px 12px;background:var(--s2);border:1px solid var(--ac);color:var(--ac);border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600}
 .add-step select{min-width:60px}
 /* Drag handle */
-.drag-handle{cursor:grab;color:var(--tx2);font-size:11px;padding:2px 3px;user-select:none;flex-shrink:0;margin-top:2px}
+.drag-handle{cursor:grab;color:var(--tx2);font-size:14px;padding:2px 4px;user-select:none;flex-shrink:0;margin-top:1px}
 .drag-handle:active{cursor:grabbing}
-.it.dragging{opacity:.3}
-.it.drag-over{border-top:2px solid var(--ac);margin-top:-2px}
+.it.dragging{opacity:.25;background:var(--s2)}
+.drop-indicator{height:2px;background:var(--ac);margin:0 0 0 24px;border-radius:1px;display:none}
+.drop-indicator.show{display:block}
+/* Move buttons */
+.it-actions .btn-move{color:var(--tx2);font-size:10px;line-height:1}.it-actions .btn-move:hover{background:var(--bl-bg);color:var(--bl)}
 .add-step button:hover{background:var(--gn-bg)}
 /* Item actions */
 .it-actions{display:flex;gap:2px;flex-shrink:0;margin-top:2px}
@@ -411,12 +414,16 @@ function renderItem(i,checks,notes,datos,isCustom,phaseId,sectionLabel){
   const text=getItemText(i);const tag=getItemTag(i);const tc=tagClass(tag);
   const id=i.id;const ck=checks[id];const isDone=ck&&ck.done;const nt=notes[id]||'';
   let h='';
-  const dropAttrs=` ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'${id}','${phaseId}','${esc(sectionLabel||'')}')"`;
-  const dragAttrs=isCustom?` draggable="true" ondragstart="onDragStart(event,'${id}')" ondragend="onDragEnd(event)"`:'';
-  h+=`<div class="it" data-id="${id}"${dragAttrs}${dropAttrs}>`;
+  // Drop indicator above this item
+  h+=`<div class="drop-indicator" data-drop-before="${id}" ondragover="onDragOver(event)" ondrop="onDrop(event,'${id}')"></div>`;
+  h+=`<div class="it" data-id="${id}"${isCustom?` draggable="true" ondragstart="onDragStart(event,'${id}')" ondragend="onDragEnd(event)"`:''} ondragover="onDragOverItem(event,'${id}')" ondragleave="onDragLeaveItem(event,'${id}')">`;
   if(isCustom)h+=`<span class="drag-handle" title="Arrastrar">⠿</span>`;
-  h+=`<input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${id}',this.checked)"><label class="${isDone?'done':''}">${esc(text)} <span class="tg ${tc}" onclick="event.stopPropagation();cycleTag('${id}','${tag}',${isCustom})">${tag}</span></label>`;
+  h+=`<input type="checkbox" draggable="false" ${isDone?'checked':''} onchange="togCheck('${id}',this.checked)"><label draggable="false" class="${isDone?'done':''}">${esc(text)} <span class="tg ${tc}" onclick="event.stopPropagation();cycleTag('${id}','${tag}',${isCustom})">${tag}</span></label>`;
   h+=`<div class="it-actions">`;
+  if(isCustom){
+    h+=`<button class="btn-move" title="Subir" onclick="moveStep('${id}','up')">&#9650;</button>`;
+    h+=`<button class="btn-move" title="Bajar" onclick="moveStep('${id}','down')">&#9660;</button>`;
+  }
   h+=`<button class="btn-edit" title="Editar" onclick="startEdit('${id}')">&#9998;</button>`;
   h+=isCustom?`<button class="btn-del" title="Eliminar" onclick="delStep('${id}')">&#10005;</button>`:`<button class="btn-del" title="Eliminar" onclick="hideTask('${id}')">&#10005;</button>`;
   h+=`</div></div>`;
@@ -527,16 +534,42 @@ async function delStep(id){if(!confirm('¿Eliminar paso?'))return;await api('DEL
 
 // Drag & drop
 let dragId=null;
-function onDragStart(e,id){dragId=id;e.target.closest('.it').classList.add('dragging');e.dataTransfer.effectAllowed='move';}
-function onDragEnd(e){dragId=null;document.querySelectorAll('.it.dragging,.it.drag-over').forEach(el=>{el.classList.remove('dragging','drag-over');});}
+function onDragStart(e,id){
+  dragId=id;
+  e.dataTransfer.setData('text/plain',id);
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{const el=document.querySelector('.it[data-id="'+id+'"]');if(el)el.classList.add('dragging');},0);
+}
+function onDragEnd(e){
+  dragId=null;
+  document.querySelectorAll('.it.dragging').forEach(el=>el.classList.remove('dragging'));
+  document.querySelectorAll('.drop-indicator.show').forEach(el=>el.classList.remove('show'));
+}
 function onDragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';}
-function onDragEnter(e){e.preventDefault();const it=e.target.closest('.it');if(it&&it.dataset.id!==dragId)it.classList.add('drag-over');}
-function onDragLeave(e){const it=e.target.closest('.it');if(it)it.classList.remove('drag-over');}
-async function onDrop(e,targetId,phaseId,sectionLabel){
-  e.preventDefault();
-  document.querySelectorAll('.it.drag-over').forEach(el=>el.classList.remove('drag-over'));
+function onDragOverItem(e,targetId){
   if(!dragId||dragId===targetId)return;
-  await api('POST','/api/custom-steps/move',{stepId:dragId,beforeId:targetId,phaseId,sectionLabel});
+  e.preventDefault();
+  // Show drop indicator above this item
+  document.querySelectorAll('.drop-indicator.show').forEach(el=>el.classList.remove('show'));
+  const indicator=document.querySelector('.drop-indicator[data-drop-before="'+targetId+'"]');
+  if(indicator)indicator.classList.add('show');
+}
+function onDragLeaveItem(e,targetId){
+  const indicator=document.querySelector('.drop-indicator[data-drop-before="'+targetId+'"]');
+  if(indicator){
+    const rect=e.target.closest('.it');
+    if(rect&&!rect.contains(e.relatedTarget))indicator.classList.remove('show');
+  }
+}
+async function onDrop(e,targetId){
+  e.preventDefault();
+  document.querySelectorAll('.drop-indicator.show').forEach(el=>el.classList.remove('show'));
+  if(!dragId||dragId===targetId)return;
+  await api('POST','/api/custom-steps/move',{stepId:dragId,beforeId:targetId});
+  await loadClients();
+}
+async function moveStep(id,direction){
+  await api('POST','/api/custom-steps/move',{stepId:id,direction});
   await loadClients();
 }
 
