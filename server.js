@@ -39,11 +39,14 @@ function ensureDataDir() {
 
 function readDB() {
   ensureDataDir();
-  if (!fs.existsSync(DB_PATH)) return { clients: {}, customSteps: [] };
+  if (!fs.existsSync(DB_PATH)) return { clients: {}, customSteps: [], taskOverrides: {}, hiddenTasks: [] };
   try {
-    return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    if (!data.taskOverrides) data.taskOverrides = {};
+    if (!data.hiddenTasks) data.hiddenTasks = [];
+    return data;
   } catch (e) {
-    return { clients: {}, customSteps: [] };
+    return { clients: {}, customSteps: [], taskOverrides: {}, hiddenTasks: [] };
   }
 }
 
@@ -87,14 +90,14 @@ app.get('/api/clients', authMiddleware, (req, res) => {
       total: totalChecks
     };
   }
-  res.json({ clients: summary, customSteps: db.customSteps || [] });
+  res.json({ clients: summary, customSteps: db.customSteps || [], taskOverrides: db.taskOverrides || {}, hiddenTasks: db.hiddenTasks || [] });
 });
 
 app.get('/api/clients/:id', authMiddleware, (req, res) => {
   const db = readDB();
   const client = db.clients[req.params.id];
   if (!client) return res.status(404).json({ error: 'Cliente no encontrado' });
-  res.json({ client, customSteps: db.customSteps || [] });
+  res.json({ client, customSteps: db.customSteps || [], taskOverrides: db.taskOverrides || {}, hiddenTasks: db.hiddenTasks || [] });
 });
 
 app.post('/api/clients', authMiddleware, (req, res) => {
@@ -209,6 +212,41 @@ app.post('/api/custom-steps', authMiddleware, (req, res) => {
 app.delete('/api/custom-steps/:stepId', authMiddleware, (req, res) => {
   const db = readDB();
   db.customSteps = (db.customSteps || []).filter(s => s.id !== req.params.stepId);
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// ===== Task overrides (edit text/tag) =====
+app.put('/api/task-overrides/:taskId', authMiddleware, (req, res) => {
+  const { text, tag } = req.body;
+  const db = readDB();
+  if (!db.taskOverrides) db.taskOverrides = {};
+  db.taskOverrides[req.params.taskId] = { text, tag };
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+app.delete('/api/task-overrides/:taskId', authMiddleware, (req, res) => {
+  const db = readDB();
+  if (db.taskOverrides) delete db.taskOverrides[req.params.taskId];
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// ===== Hide/show tasks =====
+app.post('/api/hidden-tasks', authMiddleware, (req, res) => {
+  const { taskId } = req.body;
+  if (!taskId) return res.status(400).json({ error: 'Falta taskId' });
+  const db = readDB();
+  if (!db.hiddenTasks) db.hiddenTasks = [];
+  if (!db.hiddenTasks.includes(taskId)) db.hiddenTasks.push(taskId);
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+app.delete('/api/hidden-tasks/:taskId', authMiddleware, (req, res) => {
+  const db = readDB();
+  db.hiddenTasks = (db.hiddenTasks || []).filter(t => t !== req.params.taskId);
   writeDB(db);
   res.json({ ok: true });
 });

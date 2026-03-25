@@ -72,8 +72,9 @@
 .it input[type=checkbox]:checked::after{content:'\2713';position:absolute;top:-1px;left:1.5px;font-size:11px;color:var(--bg);font-weight:700}
 .it label{cursor:pointer;font-size:12.5px;line-height:1.4;flex:1;transition:all .2s}
 .it label.done{text-decoration:line-through;color:var(--tx2);opacity:.5}
-.tg{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;margin-left:3px;vertical-align:middle;white-space:nowrap}
+.tg{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;margin-left:3px;vertical-align:middle;white-space:nowrap;cursor:pointer}
 .tg-f{background:var(--yl-bg);color:var(--yl)}.tg-l{background:var(--gn-bg);color:var(--ac)}
+.tg-b{background:var(--bl-bg);color:var(--bl)}.tg-r{background:var(--rd-bg);color:var(--rd)}
 .note-box{background:var(--yl-bg);border-left:3px solid var(--yl);padding:8px 12px;border-radius:0 5px 5px 0;margin:8px 0;font-size:11px;color:var(--yl)}
 /* Inline note input */
 .it-note{width:100%;background:var(--s2);border:1px solid transparent;color:var(--tx2);padding:3px 8px;border-radius:4px;font-family:'DM Sans',sans-serif;font-size:11px;margin-top:3px;transition:border-color .15s}
@@ -85,8 +86,20 @@
 .add-step{display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--bd)}
 .add-step input{flex:1;background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;border-radius:5px;font-family:'DM Sans',sans-serif;font-size:12px}
 .add-step input:focus{outline:none;border-color:var(--ac)}
+.add-step select{background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:6px 8px;border-radius:5px;font-family:'DM Sans',sans-serif;font-size:11px}
 .add-step button{padding:6px 12px;background:var(--s2);border:1px solid var(--ac);color:var(--ac);border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600}
 .add-step button:hover{background:var(--gn-bg)}
+/* Item actions */
+.it-actions{display:flex;gap:2px;flex-shrink:0;margin-top:2px}
+.it-actions button{background:none;border:none;cursor:pointer;font-size:12px;padding:2px 4px;border-radius:3px;transition:background .15s}
+.it-actions .btn-edit{color:var(--tx2)}.it-actions .btn-edit:hover{background:var(--bl-bg);color:var(--bl)}
+.it-actions .btn-del{color:var(--tx2)}.it-actions .btn-del:hover{background:var(--rd-bg);color:var(--rd)}
+/* Edit inline */
+.edit-inline{display:flex;gap:6px;align-items:center;margin:4px 0 4px 24px;flex-wrap:wrap}
+.edit-inline input{flex:1;min-width:150px;background:var(--s2);border:1px solid var(--ac);color:var(--tx);padding:5px 8px;border-radius:4px;font-family:'DM Sans',sans-serif;font-size:12px}
+.edit-inline select{background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:5px 8px;border-radius:4px;font-family:'DM Sans',sans-serif;font-size:11px}
+.edit-inline button{padding:4px 10px;border-radius:4px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600}
+.edit-inline .btn-save{background:var(--ac);color:var(--bg)}.edit-inline .btn-cancel{background:var(--s2);color:var(--tx2)}
 /* Datos section */
 .datos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .dato-field{display:flex;flex-direction:column;gap:2px}
@@ -111,20 +124,15 @@ let currentClient=localStorage.getItem('ob_current')||'';
 let clientsCache={};
 let clientData=null;
 let customSteps=[];
+let taskOverrides={};
+let hiddenTasks=[];
+let editingTask=null;
+
+const TAG_OPTIONS=['Dev','Setup','Comercial','Test','Launch','Ops','Legal'];
+const TAG_CLASSES={'Dev':'tg-l','Setup':'tg-b','Comercial':'tg-f','Test':'tg-l','Launch':'tg-l','Ops':'tg-b','Legal':'tg-r'};
+function tagClass(tag){return TAG_CLASSES[tag]||'tg-f';}
 
 const PHASES=[
-{id:"p0",title:"Prerequisitos",num:"00",pill:"Bloqueante",pc:"pill-r",note:"Completar antes de configurar cualquier clínica.",sections:[
-{label:"Parametrización",items:[
-{id:"p0_1",t:"WF2: Config dinámico + Leads By ID",tg:"Dev",tc:"tg-l"},
-{id:"p0_2",t:"WF Agendamiento: calendar_id y location_id dinámicos",tg:"Dev",tc:"tg-l"},
-{id:"p0_3",t:"WF Agendamiento: Rama API Clinics.es",tg:"Dev",tc:"tg-l"},
-{id:"p0_4",t:"WF Corte de Flujo: tabla Leads dinámica",tg:"Dev",tc:"tg-l"},
-{id:"p0_5",t:"WF Agendamiento: tags post-agendamiento",tg:"Dev",tc:"tg-l"},
-{id:"p0_6",t:"Retell: DNI en agendar_cita",tg:"Dev",tc:"tg-l"},
-{id:"p0_7",t:"Retell: Prompt DNI",tg:"Dev",tc:"tg-l"},
-{id:"p0_8",t:"Timeout Waits GHL (15 min)",tg:"Dev",tc:"tg-l"},
-{id:"p0_9",t:"Retry WF1 rate limit",tg:"Dev",tc:"tg-l"},
-]}]},
 {id:"p1",title:"Datos del cliente",num:"01",pill:"Datos",pc:"pill-y",note:"Sin estos datos no se avanza.",hasDatos:true,sections:[
 {label:"Generales",items:[
 {id:"p1_1",t:"Nombre de la clínica",tg:"Comercial",tc:"tg-f",dato:"nombre_clinica"},
@@ -173,7 +181,7 @@ const PHASES=[
 {id:"p3_5",t:"Llamada saliente OK",tg:"Dev",tc:"tg-l"},
 {id:"p3_6",t:"Llamada entrante OK",tg:"Dev",tc:"tg-l"},
 ]},
-{label:"Agente Outbound",items:[
+{label:"Agente Outbound",flow:"outbound",items:[
 {id:"p3_7",t:"Prompt personalizado",tg:"Dev",tc:"tg-l"},
 {id:"p3_8",t:"Dynamic variables",tg:"Dev",tc:"tg-l"},
 {id:"p3_9",t:"ver_disponibilidad",tg:"Dev",tc:"tg-l"},
@@ -183,13 +191,13 @@ const PHASES=[
 {id:"p3_13",t:"Outbound Agent asignado",tg:"Dev",tc:"tg-l"},
 {id:"p3_14",t:"Agent ID → config",tg:"Dev",tc:"tg-l"},
 ]},
-{label:"Agente Inbound",items:[
+{label:"Agente Inbound",flow:"inbound",items:[
 {id:"p3_15",t:"Prompt inbound",tg:"Dev",tc:"tg-l"},
 {id:"p3_16",t:"Funciones + DNI",tg:"Dev",tc:"tg-l"},
 {id:"p3_17",t:"Webhook → WF2",tg:"Dev",tc:"tg-l"},
 {id:"p3_18",t:"Inbound Agent asignado",tg:"Dev",tc:"tg-l"},
 ]},
-{label:"Desvío (si solo inbound)",items:[
+{label:"Desvío (si solo inbound)",flow:"inbound",items:[
 {id:"p3_19",t:"Desvío centralita configurado",tg:"Dev",tc:"tg-l"},
 ]}]},
 {id:"p4",title:"GHL",num:"04",pill:"Setup",pc:"pill-b",sections:[
@@ -216,7 +224,7 @@ const PHASES=[
 {id:"p5_7",t:"Auto: Ciclo x estado_voz",tg:"Dev",tc:"tg-l"},
 ]}]},
 {id:"p6",title:"Testing",num:"06",pill:"Test",pc:"pill-g",note:"Todo antes de ir a producción.",sections:[
-{label:"Outbound",items:[
+{label:"Outbound",flow:"outbound",items:[
 {id:"p6_1",t:"Contesta → clasifica",tg:"Dev",tc:"tg-l"},
 {id:"p6_2",t:"No contesta → DD",tg:"Dev",tc:"tg-l"},
 {id:"p6_3",t:"DD contesta",tg:"Dev",tc:"tg-l"},
@@ -227,7 +235,7 @@ const PHASES=[
 {id:"p6_8",t:"Corte flujo",tg:"Dev",tc:"tg-l"},
 {id:"p6_9",t:"Lanzar manual",tg:"Dev",tc:"tg-l"},
 ]},
-{label:"Inbound",items:[
+{label:"Inbound",flow:"inbound",items:[
 {id:"p6_10",t:"Atiende OK",tg:"Dev",tc:"tg-l"},
 {id:"p6_11",t:"Para ciclo",tg:"Dev",tc:"tg-l"},
 {id:"p6_12",t:"Sin ciclo OK",tg:"Dev",tc:"tg-l"},
@@ -250,6 +258,28 @@ const PHASES=[
 {id:"p7_5",t:"Error Handler OK",tg:"Dev",tc:"tg-l"},
 ]}]}
 ];
+
+function shouldShowSection(section, tipo) {
+  if (!section.flow) return true;
+  if (tipo === 'outbound+inbound') return true;
+  if (tipo === 'outbound' && section.flow === 'outbound') return true;
+  if (tipo === 'inbound' && section.flow === 'inbound') return true;
+  return false;
+}
+
+function getItemText(item) {
+  const ov = taskOverrides[item.id];
+  return ov && ov.text ? ov.text : (item.t || item.text);
+}
+
+function getItemTag(item) {
+  const ov = taskOverrides[item.id];
+  return ov && ov.tag ? ov.tag : (item.tg || item.tag || 'Dev');
+}
+
+function isHidden(id) {
+  return hiddenTasks.includes(id);
+}
 
 // ===== API =====
 async function api(method,url,body){
@@ -287,7 +317,7 @@ async function doLogout(){await api('POST','/api/logout');TOKEN='';USER='';local
 
 async function loadClients(){
   const d=await api('GET','/api/clients');if(!d)return;
-  clientsCache=d.clients||{};customSteps=d.customSteps||[];
+  clientsCache=d.clients||{};customSteps=d.customSteps||[];taskOverrides=d.taskOverrides||{};hiddenTasks=d.hiddenTasks||[];
   if(currentClient&&!clientsCache[currentClient])currentClient='';
   if(!currentClient){const k=Object.keys(clientsCache);if(k.length)currentClient=k[0];}
   if(currentClient)await loadClient(currentClient);else clientData=null;
@@ -296,7 +326,7 @@ async function loadClients(){
 
 async function loadClient(id){
   const d=await api('GET','/api/clients/'+id);if(!d)return;
-  clientData=d.client;customSteps=d.customSteps||[];
+  clientData=d.client;customSteps=d.customSteps||[];taskOverrides=d.taskOverrides||{};hiddenTasks=d.hiddenTasks||[];
   currentClient=id;localStorage.setItem('ob_current',id);
 }
 
@@ -319,7 +349,7 @@ function renderClientBar(){
 
 function renderHero(){
   const checks=clientData.checks||{};
-  const allItems=getAllItems();
+  const allItems=getVisibleItems();
   const done=allItems.filter(i=>checks[i.id]&&checks[i.id].done).length;
   const pct=allItems.length?Math.round(done/allItems.length*100):0;
   return`<div class="hero"><h1>${clientData.name}</h1><p class="sub">Tipo: ${clientData.tipo} · Creado: ${clientData.created}</p><div class="pw"><div class="pt"><div class="pb" style="width:${pct}%"></div></div><div class="pl">${done}/${allItems.length} · ${pct}%</div></div></div>`;
@@ -327,40 +357,74 @@ function renderHero(){
 
 function getAllItems(){
   let items=PHASES.flatMap(p=>p.sections.flatMap(s=>s.items));
-  customSteps.forEach(cs=>{items.push({id:cs.id,t:cs.text,tg:cs.tag,tc:cs.tag==='Dev'?'tg-l':'tg-f'});});
+  customSteps.forEach(cs=>{items.push({id:cs.id,t:cs.text,tg:cs.tag||'Dev',tc:tagClass(cs.tag||'Dev')});});
+  return items;
+}
+
+function getVisibleItems(){
+  const tipo=clientData?clientData.tipo:'outbound+inbound';
+  let items=[];
+  PHASES.forEach(p=>{
+    p.sections.forEach(s=>{
+      if(shouldShowSection(s,tipo)){
+        s.items.forEach(i=>{if(!isHidden(i.id))items.push(i);});
+      }
+    });
+  });
+  customSteps.forEach(cs=>{
+    if(!isHidden(cs.id)){
+      const matchPhase=PHASES.find(p=>p.id===cs.phaseId);
+      if(matchPhase)items.push({id:cs.id,t:cs.text,tg:cs.tag||'Dev',tc:tagClass(cs.tag||'Dev')});
+    }
+  });
   return items;
 }
 
 function renderPhases(){
   const checks=clientData.checks||{};const notes=clientData.notes||{};const datos=clientData.datos||{};
+  const tipo=clientData.tipo||'outbound+inbound';
   let h='';
   PHASES.forEach(p=>{
-    const allItems=[...p.sections.flatMap(s=>s.items),...customSteps.filter(cs=>cs.phaseId===p.id)];
-    const done=allItems.filter(i=>checks[i.id]&&checks[i.id].done).length;
+    const visibleSections=p.sections.filter(s=>shouldShowSection(s,tipo));
+    if(visibleSections.length===0)return;
+    const allItems=[...visibleSections.flatMap(s=>s.items.filter(i=>!isHidden(i.id))),...customSteps.filter(cs=>cs.phaseId===p.id&&!isHidden(cs.id))];
+    const done=allItems.filter(i=>checks[i.id||i]&&checks[i.id||i].done).length;
     h+=`<div class="ph"><div class="phh" onclick="togPh('${p.id}')"><div class="phl"><span class="phn">${p.num}</span><span class="phname">${p.title}</span><span class="pill ${p.pc}">${p.pill}</span></div><div class="phr"><span class="phcnt" id="cnt_${p.id}">${done}/${allItems.length}</span><span class="phchev" id="chv_${p.id}">▾</span></div></div>`;
     h+=`<div class="phb" id="bd_${p.id}">`;
     if(p.note)h+=`<div class="note-box">${p.note}</div>`;
-    p.sections.forEach(s=>{
+    visibleSections.forEach(s=>{
       if(s.label)h+=`<div class="stit">${s.label}</div>`;
       s.items.forEach(i=>{
+        if(isHidden(i.id))return;
+        const text=getItemText(i);const tag=getItemTag(i);const tc=tagClass(tag);
         const ck=checks[i.id];const isDone=ck&&ck.done;const nt=notes[i.id]||'';
-        h+=`<div class="it"><input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${i.id}',this.checked)"><label class="${isDone?'done':''}">${i.t} <span class="tg ${i.tc}">${i.tg}</span></label></div>`;
+        h+=`<div class="it"><input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${i.id}',this.checked)"><label class="${isDone?'done':''}">${esc(text)} <span class="tg ${tc}" onclick="event.stopPropagation();cycleTag('${i.id}','${tag}',false)">${tag}</span></label>`;
+        h+=`<div class="it-actions"><button class="btn-edit" title="Editar" onclick="startEdit('${i.id}','${esc(text).replace(/'/g,"\\'")}','${tag}',false)">&#9998;</button><button class="btn-del" title="Eliminar" onclick="hideTask('${i.id}')">&#10005;</button></div></div>`;
         if(isDone&&ck.date)h+=`<div class="check-meta" style="margin-left:24px">${new Date(ck.date).toLocaleDateString('es')} · ${ck.user||''}</div>`;
+        if(editingTask===i.id)h+=renderEditInline(i.id,text,tag,false);
         h+=`<div style="margin-left:24px"><input class="it-note" placeholder="nota..." value="${esc(nt)}" onblur="saveNote('${i.id}',this.value)"></div>`;
         if(i.dato){const v=datos[i.dato]||'';h+=`<div style="margin-left:24px;margin-top:2px"><input class="it-note" style="color:var(--ac);border-color:var(--bd)" placeholder="${i.dato}" value="${esc(v)}" onblur="saveDato('${i.dato}',this.value)"></div>`;}
       });
     });
-    const csteps=customSteps.filter(cs=>cs.phaseId===p.id);
+    const csteps=customSteps.filter(cs=>cs.phaseId===p.id&&!isHidden(cs.id));
     csteps.forEach(cs=>{
+      const text=getItemText(cs);const tag=getItemTag(cs);const tc=tagClass(tag);
       const ck=checks[cs.id];const isDone=ck&&ck.done;const nt=notes[cs.id]||'';
-      h+=`<div class="it"><input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${cs.id}',this.checked)"><label class="${isDone?'done':''}">${cs.text} <span class="tg ${cs.tag==='Dev'?'tg-l':'tg-f'}">${cs.tag}</span></label><button style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:14px" onclick="delStep('${cs.id}')">&times;</button></div>`;
+      h+=`<div class="it"><input type="checkbox" ${isDone?'checked':''} onchange="togCheck('${cs.id}',this.checked)"><label class="${isDone?'done':''}">${esc(text)} <span class="tg ${tc}" onclick="event.stopPropagation();cycleTag('${cs.id}','${tag}',true)">${tag}</span></label>`;
+      h+=`<div class="it-actions"><button class="btn-edit" title="Editar" onclick="startEdit('${cs.id}','${esc(text).replace(/'/g,"\\'")}','${tag}',true)">&#9998;</button><button class="btn-del" title="Eliminar" onclick="delStep('${cs.id}')">&#10005;</button></div></div>`;
       if(isDone&&ck.date)h+=`<div class="check-meta" style="margin-left:24px">${new Date(ck.date).toLocaleDateString('es')} · ${ck.user||''}</div>`;
+      if(editingTask===cs.id)h+=renderEditInline(cs.id,text,tag,true);
       h+=`<div style="margin-left:24px"><input class="it-note" placeholder="nota..." value="${esc(nt)}" onblur="saveNote('${cs.id}',this.value)"></div>`;
     });
-    h+=`<div class="add-step"><input id="ns_${p.id}" placeholder="Agregar paso..."><button onclick="addStep('${p.id}')">+</button></div>`;
+    h+=`<div class="add-step"><input id="ns_${p.id}" placeholder="Agregar paso..."><select id="nstag_${p.id}">${TAG_OPTIONS.map(t=>`<option value="${t}">${t}</option>`).join('')}</select><button onclick="addStep('${p.id}')">+</button></div>`;
     h+=`</div></div>`;
   });
   return h;
+}
+
+function renderEditInline(id,text,tag,isCustom){
+  const tagOpts=TAG_OPTIONS.map(t=>`<option value="${t}"${t===tag?' selected':''}>${t}</option>`).join('');
+  return`<div class="edit-inline"><input id="edit_text_${id}" value="${esc(text)}"><select id="edit_tag_${id}">${tagOpts}</select><button class="btn-save" onclick="saveEdit('${id}',${isCustom})">OK</button><button class="btn-cancel" onclick="cancelEdit()">Cancel</button></div>`;
 }
 
 function renderFooter(){
@@ -371,7 +435,7 @@ function renderModal(){
   return`<div class="mo" id="modal"><div class="mbox"><h3 id="mtitle">Nuevo</h3><input id="mname" placeholder="Nombre clínica"><select id="mtipo"><option value="outbound+inbound">Outbound + Inbound</option><option value="outbound">Solo Outbound</option><option value="inbound">Solo Inbound</option></select><div class="mbtns"><button class="mbtn mbtn-c" onclick="closeModal()">Cancelar</button><button class="mbtn mbtn-ok" id="mok" onclick="confirmModal()">Crear</button></div></div></div>`;
 }
 
-function esc(s){return(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ===== Actions =====
 let modalMode='add';
@@ -409,23 +473,78 @@ async function saveDato(field,val){await api('POST','/api/clients/'+currentClien
 
 async function addStep(phaseId){
   const inp=document.getElementById('ns_'+phaseId);const text=inp.value.trim();if(!text)return;
-  await api('POST','/api/custom-steps',{phaseId,text,tag:'Dev'});
+  const tagSel=document.getElementById('nstag_'+phaseId);const tag=tagSel?tagSel.value:'Dev';
+  await api('POST','/api/custom-steps',{phaseId,text,tag});
   await loadClients();
 }
 async function delStep(id){if(!confirm('¿Eliminar paso?'))return;await api('DELETE','/api/custom-steps/'+id);await loadClients();}
+
+// Edit tasks
+function startEdit(id,text,tag,isCustom){
+  editingTask=id;renderMain();
+  setTimeout(()=>{const el=document.getElementById('edit_text_'+id);if(el)el.focus();},50);
+}
+function cancelEdit(){editingTask=null;renderMain();}
+
+async function saveEdit(id,isCustom){
+  const textEl=document.getElementById('edit_text_'+id);
+  const tagEl=document.getElementById('edit_tag_'+id);
+  if(!textEl||!tagEl)return;
+  const text=textEl.value.trim();const tag=tagEl.value;
+  if(!text)return;
+  if(isCustom){
+    // For custom steps, delete and recreate with new text/tag
+    const cs=customSteps.find(c=>c.id===id);
+    if(cs){
+      await api('DELETE','/api/custom-steps/'+id);
+      await api('POST','/api/custom-steps',{phaseId:cs.phaseId,text,tag});
+    }
+  } else {
+    await api('PUT','/api/task-overrides/'+id,{text,tag});
+  }
+  editingTask=null;
+  await loadClients();
+}
+
+// Hide built-in tasks
+async function hideTask(id){
+  if(!confirm('¿Eliminar esta tarea?'))return;
+  await api('POST','/api/hidden-tasks',{taskId:id});
+  await loadClients();
+}
+
+// Cycle tag by clicking
+async function cycleTag(id,currentTag,isCustom){
+  const idx=TAG_OPTIONS.indexOf(currentTag);
+  const nextTag=TAG_OPTIONS[(idx+1)%TAG_OPTIONS.length];
+  if(isCustom){
+    const cs=customSteps.find(c=>c.id===id);
+    if(cs){
+      await api('DELETE','/api/custom-steps/'+id);
+      await api('POST','/api/custom-steps',{phaseId:cs.phaseId,text:cs.text,tag:nextTag});
+    }
+  } else {
+    const ov=taskOverrides[id]||{};
+    await api('PUT','/api/task-overrides/'+id,{text:ov.text||'',tag:nextTag});
+  }
+  await loadClients();
+}
 
 function togPh(id){document.getElementById('bd_'+id).classList.toggle('open');document.getElementById('chv_'+id).classList.toggle('open');}
 
 async function exportCl(){
   if(!currentClient||!clientData)return;
-  const checks=clientData.checks||{};const allItems=getAllItems();
+  const checks=clientData.checks||{};const allItems=getVisibleItems();
   const done=allItems.filter(i=>checks[i.id]&&checks[i.id].done).length;
   let txt=`ONBOARDING: ${clientData.name}\n${new Date().toLocaleDateString('es')}\nTipo: ${clientData.tipo}\nProgreso: ${done}/${allItems.length}\n\n`;
+  const tipo=clientData.tipo||'outbound+inbound';
   PHASES.forEach(p=>{
-    const items=[...p.sections.flatMap(s=>s.items),...customSteps.filter(cs=>cs.phaseId===p.id)];
+    const visibleSections=p.sections.filter(s=>shouldShowSection(s,tipo));
+    if(visibleSections.length===0)return;
+    const items=[...visibleSections.flatMap(s=>s.items.filter(i=>!isHidden(i.id))),...customSteps.filter(cs=>cs.phaseId===p.id&&!isHidden(cs.id))];
     const d=items.filter(i=>checks[i.id]&&checks[i.id].done).length;
     txt+=`${p.title}: ${d}/${items.length}\n`;
-    items.forEach(i=>{txt+=`  ${checks[i.id]&&checks[i.id].done?'✅':'⬜'} ${i.t||i.text}\n`;});
+    items.forEach(i=>{txt+=`  ${checks[i.id]&&checks[i.id].done?'✅':'⬜'} ${getItemText(i)}\n`;});
     txt+='\n';
   });
   try{await navigator.clipboard.writeText(txt);alert('Copiado');}catch(e){prompt('Copiá manualmente:',txt);}
